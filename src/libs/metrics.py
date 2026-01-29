@@ -47,18 +47,10 @@ def get_metrics_sender() -> "MetricsSender":
     """
     Factory function to create and return the appropriate metrics sender based on environment variables.
 
-    Priority order: Datadog > SignalFx > ObsByClara
+    Priority order: ObsByClara > Datadog > SignalFx
 
     :return: An instance of a MetricsSender implementation
     """
-    # Check for Datadog configuration
-    dd_api_key = os.environ.get("DD_API_KEY")
-    dd_api_host = os.environ.get("DD_API_HOST")
-
-    # Check for SignalFx configuration
-    sfx_token = os.environ.get("SFX_TOKEN")
-    sfx_realm = os.environ.get("SFX_REALM")
-
     # Check for ObsByClara configuration
     obc_endpoint = os.environ.get("OBC_ENDPOINT")
     obc_region = os.environ.get("OBC_REGION")
@@ -69,22 +61,16 @@ def get_metrics_sender() -> "MetricsSender":
     obc_namespace = os.environ.get("OBC_NAMESPACE", "CustomMetrics")
     obc_max_retries = int(os.environ.get("OBC_MAX_RETRIES", "3"))
 
-    # Prioritize Datadog if available
-    if dd_api_key:
-        logger.info("Using Datadog metrics sender")
-        dd_config = {"api_key": dd_api_key}
-        if dd_api_host:
-            dd_config["api_host"] = dd_api_host
-        return DatadogMetricsSender(**dd_config)
-    elif sfx_token:
-        logger.info("Using SignalFx metrics sender")
-        sfx_config = {
-            "token": sfx_token,
-        }
-        if sfx_realm:
-            sfx_config["realm"] = sfx_realm
-        return SignalFxMetricsSender(**sfx_config)
-    elif obc_endpoint and obc_region and obc_service and aws_access_key_id and aws_secret_access_key:
+    # Check for Datadog configuration
+    dd_api_key = os.environ.get("DD_API_KEY")
+    dd_api_host = os.environ.get("DD_API_HOST")
+
+    # Check for SignalFx configuration
+    sfx_token = os.environ.get("SFX_TOKEN")
+    sfx_realm = os.environ.get("SFX_REALM")
+
+    # Prioritize ObsByClara if available
+    if obc_endpoint and obc_region and obc_service and aws_access_key_id and aws_secret_access_key:
         logger.info("Using ObsByClara metrics sender")
         obc_config = {
             "endpoint": obc_endpoint,
@@ -98,11 +84,25 @@ def get_metrics_sender() -> "MetricsSender":
         if aws_session_token:
             obc_config["session_token"] = aws_session_token
         return ObsByClaraMetricsSender(**obc_config)
+    elif dd_api_key:
+        logger.info("Using Datadog metrics sender")
+        dd_config = {"api_key": dd_api_key}
+        if dd_api_host:
+            dd_config["api_host"] = dd_api_host
+        return DatadogMetricsSender(**dd_config)
+    elif sfx_token:
+        logger.info("Using SignalFx metrics sender")
+        sfx_config = {
+            "token": sfx_token,
+        }
+        if sfx_realm:
+            sfx_config["realm"] = sfx_realm
+        return SignalFxMetricsSender(**sfx_config)
     else:
         raise ValueError(
             "No metrics backend configuration found. "
-            "Please provide either Datadog (DD_API_KEY), SignalFx (SFX_TOKEN), "
-            "or ObsByClara (OBC_ENDPOINT, OBC_REGION, OBC_SERVICE, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) credentials.",
+            "Please provide either ObsByClara (OBC_ENDPOINT, OBC_REGION, OBC_SERVICE, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY), "
+            "Datadog (DD_API_KEY), or SignalFx (SFX_TOKEN) credentials.",
         )
 
 
