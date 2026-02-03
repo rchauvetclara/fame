@@ -1,6 +1,6 @@
 """Tests for metrics module."""
 import pytest
-from src.libs.metrics import _sanitize_prometheus_name
+from src.libs.metrics import _sanitize_prometheus_name, ObsByClaraMetricsSender
 
 
 class TestPrometheusNameSanitization:
@@ -38,3 +38,71 @@ class TestPrometheusNameSanitization:
     def test_empty_string(self):
         """Empty string should return underscore."""
         assert _sanitize_prometheus_name("") == "_"
+
+
+class TestObsByClaraInit:
+    """Test ObsByClaraMetricsSender initialization."""
+
+    def test_init_required_params(self):
+        """Should initialize with required parameters only."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://aps-workspaces.eu-west-1.amazonaws.com/workspaces/ws-123",
+            region="eu-west-1",
+            service="aps",
+            access_key_id="AKIATEST",
+            secret_access_key="secret123",
+        )
+
+        assert sender.endpoint.endswith("/api/v1/remote_write")
+        assert sender.region == "eu-west-1"
+        assert sender.service == "aps"
+        assert sender.max_retries == 3
+        assert not hasattr(sender, 'namespace')
+
+    def test_init_with_session_token(self):
+        """Should accept optional session token."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com",
+            region="us-east-1",
+            service="aps",
+            access_key_id="key",
+            secret_access_key="secret",
+            session_token="token123",
+        )
+
+        assert sender.session_token == "token123"
+
+    def test_init_appends_remote_write_path(self):
+        """Should append /api/v1/remote_write if not present."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com",
+            region="us-east-1",
+            service="aps",
+            access_key_id="key",
+            secret_access_key="secret",
+        )
+
+        assert sender.endpoint == "https://example.com/api/v1/remote_write"
+
+    def test_init_preserves_remote_write_path(self):
+        """Should not duplicate /api/v1/remote_write if already present."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com/api/v1/remote_write",
+            region="us-east-1",
+            service="aps",
+            access_key_id="key",
+            secret_access_key="secret",
+        )
+
+        assert sender.endpoint == "https://example.com/api/v1/remote_write"
+
+    def test_init_validates_required_params(self):
+        """Should raise ValueError for missing required parameters."""
+        with pytest.raises(ValueError, match="endpoint is required"):
+            ObsByClaraMetricsSender(
+                endpoint="",
+                region="us-east-1",
+                service="aps",
+                access_key_id="key",
+                secret_access_key="secret",
+            )
