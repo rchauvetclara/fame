@@ -482,11 +482,11 @@ class ObsByClaraMetricsSender(MetricsSender):
                 logger.error(f"HTTP error sending metrics to ObsByClara: {e}")
                 raise
 
-    def _send_signed_request(self, payload: str) -> requests.Response:
+    def _send_signed_request(self, payload: bytes) -> requests.Response:
         """
-        Send an AWS SigV4 signed HTTP POST request.
+        Send an AWS SigV4 signed HTTP POST request with Prometheus protobuf payload.
 
-        :param payload: JSON payload as string
+        :param payload: Compressed protobuf payload as bytes
         :return: HTTP response
         """
         # Parse endpoint URL
@@ -498,7 +498,7 @@ class ObsByClaraMetricsSender(MetricsSender):
 
         # Request parameters
         method = "POST"
-        content_type = "application/json"
+        content_type = "application/x-protobuf"
 
         # Create timestamps
         t = datetime.utcnow()
@@ -506,7 +506,7 @@ class ObsByClaraMetricsSender(MetricsSender):
         date_stamp = t.strftime("%Y%m%d")
 
         # Create canonical request
-        payload_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        payload_hash = hashlib.sha256(payload).hexdigest()
 
         canonical_headers = f"content-type:{content_type}\nhost:{host}\nx-amz-date:{amz_date}\n"
         signed_headers = "content-type;host;x-amz-date"
