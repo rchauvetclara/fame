@@ -15,6 +15,46 @@ from typing import List, Dict, Tuple
 logger = logging.getLogger("metrics")
 
 
+def _sanitize_prometheus_name(name: str) -> str:
+    """
+    Sanitize metric/label name to follow Prometheus naming conventions.
+
+    Prometheus metric and label names:
+    - May contain ASCII letters, digits, underscores, and colons
+    - Must match regex [a-zA-Z_:][a-zA-Z0-9_:]*
+    - Must not start with digit
+
+    :param name: Original metric or label name
+    :return: Sanitized name following Prometheus conventions
+    """
+    import re
+
+    if not name:
+        logger.warning("Empty metric name provided, using '_' as fallback")
+        return "_"
+
+    original_name = name
+
+    # Replace invalid characters with underscores
+    # Keep only letters, digits, underscores, and colons
+    sanitized = re.sub(r'[^a-zA-Z0-9_:]', '_', name)
+
+    # Collapse multiple consecutive underscores into single underscore
+    sanitized = re.sub(r'_+', '_', sanitized)
+
+    # Ensure doesn't start with digit
+    if sanitized and sanitized[0].isdigit():
+        sanitized = '_' + sanitized
+
+    # Log warning if name was modified
+    if sanitized != original_name:
+        logger.warning(
+            f"Metric name sanitized for Prometheus: '{original_name}' -> '{sanitized}'"
+        )
+
+    return sanitized
+
+
 def _sign(key: bytes, msg: str) -> bytes:
     """
     Generate HMAC-SHA256 signature for AWS SigV4.
