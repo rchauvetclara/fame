@@ -15,7 +15,7 @@ import sys
 import os
 from datetime import datetime
 
-sys.path.insert(0, 'src')
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from libs.metrics import get_metrics_sender
 
