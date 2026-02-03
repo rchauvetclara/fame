@@ -409,40 +409,44 @@ class ObsByClaraMetricsSender(MetricsSender):
         self, name: str, values: List[Tuple[datetime, float, Dict[str, str]]]
     ) -> None:
         """
-        Send metrics to ObsByClara using AWS SigV4 signed requests.
+        Send metrics to ObsByClara using AWS SigV4 signed requests with Prometheus Remote Write format.
 
         :param name: Name of the metric
         :param values: List of timestamp, value and dimensions tuples
         :return: None
         """
+        import snappy
+
         if not values:
             logger.warning(f"No metrics data to send for {name}")
             return
 
-        # Build CloudWatch format payload
-        metric_data = []
-        for dt, value, dimensions in values:
-            metric_datum = {
-                "MetricName": name,
-                "Timestamp": dt.isoformat(),
-                "Value": value,
-                "Unit": "None",
-                "Dimensions": [
-                    {"Name": k, "Value": v} for k, v in dimensions.items()
-                ],
-            }
-            metric_data.append(metric_datum)
+        # Build Prometheus WriteRequest
+        write_request = self._build_prometheus_write_request(name, values)
 
-        payload = {"Namespace": self.namespace, "MetricData": metric_data}
-        payload_json = json.dumps(payload)
+        # Serialize to protobuf
+        try:
+            payload_bytes = write_request.SerializeToString()
+            logger.debug(f"Serialized protobuf payload: {len(payload_bytes)} bytes")
+        except Exception as e:
+            logger.error(f"Failed to serialize Prometheus protobuf: {e}")
+            raise
 
-        logger.debug(f"Sending payload: {payload_json}")
+        # Compress with Snappy
+        try:
+            compressed_payload = snappy.compress(payload_bytes)
+            logger.debug(
+                f"Compressed payload: {len(payload_bytes)} -> {len(compressed_payload)} bytes"
+            )
+        except Exception as e:
+            logger.error(f"Failed to compress payload with Snappy: {e}")
+            raise
 
         # Retry logic with exponential backoff
         for attempt in range(self.max_retries + 1):
             try:
                 # Sign and send the request
-                response = self._send_signed_request(payload_json)
+                response = self._send_signed_request(compressed_payload)
                 response.raise_for_status()
                 logger.info(
                     f"Successfully sent {name} metrics to ObsByClara (attempt {attempt + 1})"
