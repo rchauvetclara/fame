@@ -1,8 +1,10 @@
 """Tests for metrics module."""
 import os
 import pytest
+from datetime import datetime
 from unittest.mock import patch
 from src.libs.metrics import _sanitize_prometheus_name, ObsByClaraMetricsSender
+from src.libs.prometheus_pb2 import WriteRequest, TimeSeries, Label, Sample
 
 
 class TestPrometheusNameSanitization:
@@ -148,3 +150,109 @@ class TestMetricsSenderFactory:
             sender = get_metrics_sender()
 
             assert isinstance(sender, ObsByClaraMetricsSender)
+
+
+class TestPrometheusPayloadBuilder:
+    """Test Prometheus protobuf payload building."""
+
+    def test_build_write_request_single_metric(self):
+        """Should build WriteRequest for single metric."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com",
+            region="us-east-1",
+            service="aps",
+            access_key_id="key",
+            secret_access_key="secret",
+        )
+
+        metric_name = "test_metric"
+        timestamp = datetime(2026, 1, 1, 12, 0, 0)
+        values = [
+            (timestamp, 42.5, {"env": "prod", "host": "server1"}),
+        ]
+
+        write_request = sender._build_prometheus_write_request(metric_name, values)
+
+        assert isinstance(write_request, WriteRequest)
+        assert len(write_request.timeseries) == 1
+
+        ts = write_request.timeseries[0]
+        assert len(ts.labels) == 3  # __name__ + env + host
+        assert len(ts.samples) == 1
+
+        # Check __name__ label
+        name_labels = [l for l in ts.labels if l.name == "__name__"]
+        assert len(name_labels) == 1
+        assert name_labels[0].value == "test_metric"
+
+        # Check dimension labels
+        env_labels = [l for l in ts.labels if l.name == "env"]
+        assert len(env_labels) == 1
+        assert env_labels[0].value == "prod"
+
+        # Check sample
+        assert ts.samples[0].value == 42.5
+        assert ts.samples[0].timestamp == int(timestamp.timestamp() * 1000)
+
+    def test_build_write_request_multiple_metrics_same_dimensions(self):
+        """Should create separate TimeSeries for each value even with same dimensions."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com",
+            region="us-east-1",
+            service="aps",
+            access_key_id="key",
+            secret_access_key="secret",
+        )
+
+        metric_name = "test_metric"
+        timestamp1 = datetime(2026, 1, 1, 12, 0, 0)
+        timestamp2 = datetime(2026, 1, 1, 12, 1, 0)
+        values = [
+            (timestamp1, 10.0, {"env": "prod"}),
+            (timestamp2, 20.0, {"env": "prod"}),
+        ]
+
+        write_request = sender._build_prometheus_write_request(metric_name, values)
+
+        assert len(write_request.timeseries) == 2
+
+    def test_build_write_request_sanitizes_metric_name(self):
+        """Should sanitize metric names to Prometheus format."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com",
+            region="us-east-1",
+            service="aps",
+            access_key_id="key",
+            secret_access_key="secret",
+        )
+
+        metric_name = "azure.vm.cpu-usage"
+        timestamp = datetime(2026, 1, 1, 12, 0, 0)
+        values = [(timestamp, 50.0, {})]
+
+        write_request = sender._build_prometheus_write_request(metric_name, values)
+
+        ts = write_request.timeseries[0]
+        name_labels = [l for l in ts.labels if l.name == "__name__"]
+        assert name_labels[0].value == "azure_vm_cpu_usage"
+
+    def test_build_write_request_sanitizes_label_names(self):
+        """Should sanitize label names to Prometheus format."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com",
+            region="us-east-1",
+            service="aps",
+            access_key_id="key",
+            secret_access_key="secret",
+        )
+
+        metric_name = "test_metric"
+        timestamp = datetime(2026, 1, 1, 12, 0, 0)
+        values = [(timestamp, 50.0, {"resource-group": "rg1", "vm.name": "vm01"})]
+
+        write_request = sender._build_prometheus_write_request(metric_name, values)
+
+        ts = write_request.timeseries[0]
+        label_names = [l.name for l in ts.labels]
+        assert "resource_group" in label_names
+        assert "vm_name" in label_names
