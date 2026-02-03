@@ -364,6 +364,47 @@ class ObsByClaraMetricsSender(MetricsSender):
         self.session_token = session_token
         self.max_retries = max_retries
 
+    def _build_prometheus_write_request(
+        self, name: str, values: List[Tuple[datetime, float, Dict[str, str]]]
+    ) -> "WriteRequest":
+        """
+        Build a Prometheus WriteRequest from metric data.
+
+        :param name: Metric name
+        :param values: List of (timestamp, value, dimensions) tuples
+        :return: Prometheus WriteRequest object
+        """
+        from src.libs.prometheus_pb2 import WriteRequest, TimeSeries, Label, Sample
+
+        write_request = WriteRequest()
+
+        # Sanitize metric name
+        sanitized_name = _sanitize_prometheus_name(name)
+
+        # Create a TimeSeries for each metric value
+        for dt, value, dimensions in values:
+            ts = TimeSeries()
+
+            # Add __name__ label
+            ts.labels.append(Label(name="__name__", value=sanitized_name))
+
+            # Add dimension labels (sanitize label names)
+            for dim_name, dim_value in sorted(dimensions.items()):
+                sanitized_label_name = _sanitize_prometheus_name(dim_name)
+                ts.labels.append(Label(name=sanitized_label_name, value=str(dim_value)))
+
+            # Add sample (convert timestamp to milliseconds)
+            timestamp_ms = int(dt.timestamp() * 1000)
+            ts.samples.append(Sample(value=value, timestamp=timestamp_ms))
+
+            write_request.timeseries.append(ts)
+
+        logger.debug(
+            f"Built Prometheus WriteRequest with {len(write_request.timeseries)} time series"
+        )
+
+        return write_request
+
     def send_metrics(
         self, name: str, values: List[Tuple[datetime, float, Dict[str, str]]]
     ) -> None:
