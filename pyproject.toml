@@ -16,6 +16,7 @@ cffi = "^2.0.0"
 cryptography = "^46.0.0"
 datadog =  "^0.52.0"
 python-dateutil = "^2.9.0"
+python-snappy = "^0.7.0"
 requests = "^2.32.3"
 
 [tool.poetry.group.dev.dependencies]
