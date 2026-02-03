@@ -10,7 +10,10 @@ import os
 import requests
 import time
 from abc import ABC, abstractmethod
-from typing import List, Dict, Tuple
+from typing import TYPE_CHECKING, List, Dict, Tuple, Optional
+
+if TYPE_CHECKING:
+    from src.libs.prometheus_pb2 import WriteRequest
 
 logger = logging.getLogger("metrics")
 
@@ -323,7 +326,7 @@ class ObsByClaraMetricsSender(MetricsSender):
         service: str,
         access_key_id: str,
         secret_access_key: str,
-        session_token: str = None,
+        session_token: Optional[str] = None,
         max_retries: int = 3,
     ):
         """

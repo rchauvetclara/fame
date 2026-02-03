@@ -5,7 +5,7 @@ import snappy
 from datetime import datetime
 from unittest.mock import Mock, patch
 from src.libs.metrics import _sanitize_prometheus_name, ObsByClaraMetricsSender
-from src.libs.prometheus_pb2 import WriteRequest, TimeSeries, Label, Sample
+from src.libs.prometheus_pb2 import WriteRequest
 
 
 class TestPrometheusNameSanitization:
@@ -182,12 +182,12 @@ class TestPrometheusPayloadBuilder:
         assert len(ts.samples) == 1
 
         # Check __name__ label
-        name_labels = [l for l in ts.labels if l.name == "__name__"]
+        name_labels = [label for label in ts.labels if label.name == "__name__"]
         assert len(name_labels) == 1
         assert name_labels[0].value == "test_metric"
 
         # Check dimension labels
-        env_labels = [l for l in ts.labels if l.name == "env"]
+        env_labels = [label for label in ts.labels if label.name == "env"]
         assert len(env_labels) == 1
         assert env_labels[0].value == "prod"
 
@@ -234,7 +234,7 @@ class TestPrometheusPayloadBuilder:
         write_request = sender._build_prometheus_write_request(metric_name, values)
 
         ts = write_request.timeseries[0]
-        name_labels = [l for l in ts.labels if l.name == "__name__"]
+        name_labels = [label for label in ts.labels if label.name == "__name__"]
         assert name_labels[0].value == "azure_vm_cpu_usage"
 
     def test_build_write_request_sanitizes_label_names(self):
@@ -254,7 +254,7 @@ class TestPrometheusPayloadBuilder:
         write_request = sender._build_prometheus_write_request(metric_name, values)
 
         ts = write_request.timeseries[0]
-        label_names = [l.name for l in ts.labels]
+        label_names = [label.name for label in ts.labels]
         assert "resource_group" in label_names
         assert "vm_name" in label_names
 
