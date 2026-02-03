@@ -357,3 +357,63 @@ class TestObsByClaraSendMetrics:
                 # Verify retries
                 assert mock_send.call_count == 3
                 assert mock_sleep.call_count == 2
+
+
+class TestObsByClaraSigV4Signing:
+    """Test SigV4 signing with Prometheus protobuf."""
+
+    def test_send_signed_request_uses_protobuf_content_type(self):
+        """Should use application/x-protobuf content type."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com",
+            region="us-east-1",
+            service="aps",
+            access_key_id="AKIATEST",
+            secret_access_key="secretkey",
+        )
+
+        test_payload = b"test_protobuf_bytes"
+
+        with patch('src.libs.metrics.requests.post') as mock_post:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_post.return_value = mock_response
+
+            sender._send_signed_request(test_payload)
+
+            # Verify request was made
+            assert mock_post.called
+            call_kwargs = mock_post.call_args[1]
+
+            # Verify headers
+            headers = call_kwargs['headers']
+            assert headers['Content-Type'] == 'application/x-protobuf'
+            assert 'Authorization' in headers
+            assert 'AWS4-HMAC-SHA256' in headers['Authorization']
+            assert 'X-Amz-Date' in headers
+
+            # Verify payload is bytes
+            assert call_kwargs['data'] == test_payload
+
+    def test_send_signed_request_includes_session_token(self):
+        """Should include X-Amz-Security-Token when session token present."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com",
+            region="us-east-1",
+            service="aps",
+            access_key_id="AKIATEST",
+            secret_access_key="secretkey",
+            session_token="session123",
+        )
+
+        test_payload = b"test"
+
+        with patch('src.libs.metrics.requests.post') as mock_post:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_post.return_value = mock_response
+
+            sender._send_signed_request(test_payload)
+
+            headers = mock_post.call_args[1]['headers']
+            assert headers['X-Amz-Security-Token'] == 'session123'
