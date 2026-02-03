@@ -1,5 +1,7 @@
 """Tests for metrics module."""
+import os
 import pytest
+from unittest.mock import patch
 from src.libs.metrics import _sanitize_prometheus_name, ObsByClaraMetricsSender
 
 
@@ -106,3 +108,43 @@ class TestObsByClaraInit:
                 access_key_id="key",
                 secret_access_key="secret",
             )
+
+
+class TestMetricsSenderFactory:
+    """Test get_metrics_sender factory function."""
+
+    def test_factory_creates_obsbyclara_without_namespace(self):
+        """Factory should create ObsByClara sender without namespace env var."""
+        env_vars = {
+            "OBC_ENDPOINT": "https://example.com",
+            "OBC_REGION": "eu-west-1",
+            "OBC_SERVICE": "aps",
+            "AWS_ACCESS_KEY_ID": "key",
+            "AWS_SECRET_ACCESS_KEY": "secret",
+        }
+
+        with patch.dict(os.environ, env_vars, clear=True):
+            from src.libs.metrics import get_metrics_sender
+            sender = get_metrics_sender()
+
+            assert isinstance(sender, ObsByClaraMetricsSender)
+            assert sender.region == "eu-west-1"
+            assert not hasattr(sender, 'namespace')
+
+    def test_factory_obeys_priority_order(self):
+        """Factory should prioritize ObsByClara > Datadog > SignalFx."""
+        env_vars = {
+            "OBC_ENDPOINT": "https://example.com",
+            "OBC_REGION": "eu-west-1",
+            "OBC_SERVICE": "aps",
+            "AWS_ACCESS_KEY_ID": "key",
+            "AWS_SECRET_ACCESS_KEY": "secret",
+            "DD_API_KEY": "dd_key",
+            "SFX_TOKEN": "sfx_token",
+        }
+
+        with patch.dict(os.environ, env_vars, clear=True):
+            from src.libs.metrics import get_metrics_sender
+            sender = get_metrics_sender()
+
+            assert isinstance(sender, ObsByClaraMetricsSender)

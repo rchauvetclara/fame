@@ -98,7 +98,6 @@ def get_metrics_sender() -> "MetricsSender":
     aws_access_key_id = os.environ.get("AWS_ACCESS_KEY_ID")
     aws_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
     aws_session_token = os.environ.get("AWS_SESSION_TOKEN")
-    obc_namespace = os.environ.get("OBC_NAMESPACE", "CustomMetrics")
     obc_max_retries = int(os.environ.get("OBC_MAX_RETRIES", "3"))
 
     # Check for Datadog configuration
@@ -118,7 +117,6 @@ def get_metrics_sender() -> "MetricsSender":
             "service": obc_service,
             "access_key_id": aws_access_key_id,
             "secret_access_key": aws_secret_access_key,
-            "namespace": obc_namespace,
             "max_retries": obc_max_retries,
         }
         if aws_session_token:
