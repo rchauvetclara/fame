@@ -326,19 +326,17 @@ class ObsByClaraMetricsSender(MetricsSender):
         access_key_id: str,
         secret_access_key: str,
         session_token: str = None,
-        namespace: str = "CustomMetrics",
         max_retries: int = 3,
     ):
         """
         Initialize the ObsByClara metrics sender with configuration.
 
-        :param endpoint: Full URL of the ObsByClara API endpoint
+        :param endpoint: Full URL of the ObsByClara API endpoint (will append /api/v1/remote_write if not present)
         :param region: AWS region for SigV4 signing
-        :param service: AWS service name for SigV4 signing
+        :param service: AWS service name for SigV4 signing (typically 'aps' for AWS Managed Prometheus)
         :param access_key_id: AWS access key ID
         :param secret_access_key: AWS secret access key
         :param session_token: AWS session token (optional)
-        :param namespace: CloudWatch namespace (default: 'CustomMetrics')
         :param max_retries: Maximum number of retry attempts (default: 3)
         """
         logger.info(
@@ -356,13 +354,16 @@ class ObsByClaraMetricsSender(MetricsSender):
         if not secret_access_key:
             raise ValueError("AWS secret access key is required")
 
+        # Append remote write path if not present
+        if not endpoint.endswith("/api/v1/remote_write"):
+            endpoint = endpoint.rstrip("/") + "/api/v1/remote_write"
+
         self.endpoint = endpoint
         self.region = region
         self.service = service
         self.access_key_id = access_key_id
         self.secret_access_key = secret_access_key
         self.session_token = session_token
-        self.namespace = namespace
         self.max_retries = max_retries
 
     def send_metrics(
