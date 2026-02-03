@@ -1,8 +1,9 @@
 """Tests for metrics module."""
 import os
 import pytest
+import snappy
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from src.libs.metrics import _sanitize_prometheus_name, ObsByClaraMetricsSender
 from src.libs.prometheus_pb2 import WriteRequest, TimeSeries, Label, Sample
 
@@ -256,3 +257,103 @@ class TestPrometheusPayloadBuilder:
         label_names = [l.name for l in ts.labels]
         assert "resource_group" in label_names
         assert "vm_name" in label_names
+
+
+class TestObsByClaraSendMetrics:
+    """Test ObsByClara send_metrics method with Prometheus format."""
+
+    def test_send_metrics_creates_protobuf_payload(self):
+        """Should create and compress Prometheus protobuf payload."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com",
+            region="us-east-1",
+            service="aps",
+            access_key_id="key",
+            secret_access_key="secret",
+        )
+
+        timestamp = datetime(2026, 1, 1, 12, 0, 0)
+        values = [(timestamp, 42.5, {"env": "prod"})]
+
+        with patch.object(sender, '_send_signed_request') as mock_send:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.raise_for_status = Mock()
+            mock_send.return_value = mock_response
+
+            sender.send_metrics("test_metric", values)
+
+            # Verify _send_signed_request was called
+            assert mock_send.called
+            call_args = mock_send.call_args[0]
+            payload_bytes = call_args[0]
+
+            # Verify payload is bytes (compressed)
+            assert isinstance(payload_bytes, bytes)
+
+            # Verify payload can be decompressed
+            decompressed = snappy.decompress(payload_bytes)
+            assert isinstance(decompressed, bytes)
+            assert len(decompressed) > 0
+
+    def test_send_metrics_handles_empty_values(self):
+        """Should handle empty values list without making request."""
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com",
+            region="us-east-1",
+            service="aps",
+            access_key_id="key",
+            secret_access_key="secret",
+        )
+
+        with patch.object(sender, '_send_signed_request') as mock_send:
+            sender.send_metrics("test_metric", [])
+
+            # Should not make request
+            assert not mock_send.called
+
+    def test_send_metrics_retries_on_failure(self):
+        """Should retry with exponential backoff on transient failures."""
+        import requests
+
+        sender = ObsByClaraMetricsSender(
+            endpoint="https://example.com",
+            region="us-east-1",
+            service="aps",
+            access_key_id="key",
+            secret_access_key="secret",
+            max_retries=2,
+        )
+
+        timestamp = datetime(2026, 1, 1, 12, 0, 0)
+        values = [(timestamp, 42.5, {"env": "prod"})]
+
+        with patch.object(sender, '_send_signed_request') as mock_send:
+            with patch('time.sleep') as mock_sleep:
+                # Create HTTPError for 500 response
+                mock_response_fail = Mock()
+                mock_response_fail.status_code = 500
+                http_error = requests.exceptions.HTTPError(response=mock_response_fail)
+                http_error.response = mock_response_fail
+
+                # First two calls fail, third succeeds
+                def raise_http_error():
+                    raise http_error
+
+                mock_response_fail.raise_for_status = raise_http_error
+
+                mock_response_success = Mock()
+                mock_response_success.status_code = 200
+                mock_response_success.raise_for_status = Mock()
+
+                mock_send.side_effect = [
+                    mock_response_fail,
+                    mock_response_fail,
+                    mock_response_success,
+                ]
+
+                sender.send_metrics("test_metric", values)
+
+                # Verify retries
+                assert mock_send.call_count == 3
+                assert mock_sleep.call_count == 2
