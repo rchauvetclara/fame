@@ -5,8 +5,8 @@ import pytest
 import snappy
 from datetime import datetime
 from unittest.mock import Mock, patch
-from src.libs.metrics import _sanitize_prometheus_name, ObsByClaraMetricsSender
-from src.libs.prometheus_pb2 import WriteRequest
+from libs.metrics import _sanitize_prometheus_name, ObsByClaraMetricsSender
+from libs.prometheus_pb2 import WriteRequest
 
 
 class TestPrometheusNameSanitization:
@@ -131,7 +131,7 @@ class TestMetricsSenderFactory:
         }
 
         with patch.dict(os.environ, env_vars, clear=True):
-            from src.libs.metrics import get_metrics_sender
+            from libs.metrics import get_metrics_sender
 
             sender = get_metrics_sender()
 
@@ -152,7 +152,7 @@ class TestMetricsSenderFactory:
         }
 
         with patch.dict(os.environ, env_vars, clear=True):
-            from src.libs.metrics import get_metrics_sender
+            from libs.metrics import get_metrics_sender
 
             sender = get_metrics_sender()
 
@@ -380,7 +380,7 @@ class TestObsByClaraSigV4Signing:
 
         test_payload = b"test_protobuf_bytes"
 
-        with patch("src.libs.metrics.requests.post") as mock_post:
+        with patch("libs.metrics.requests.post") as mock_post:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_post.return_value = mock_response
@@ -414,7 +414,7 @@ class TestObsByClaraSigV4Signing:
 
         test_payload = b"test"
 
-        with patch("src.libs.metrics.requests.post") as mock_post:
+        with patch("libs.metrics.requests.post") as mock_post:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_post.return_value = mock_response
