@@ -13,6 +13,7 @@ from typing import List
 @dataclass
 class Label:
     """Prometheus label (key-value pair)."""
+
     name: str
     value: str
 
@@ -20,6 +21,7 @@ class Label:
 @dataclass
 class Sample:
     """Prometheus sample (value + timestamp)."""
+
     value: float
     timestamp: int  # milliseconds since epoch
 
@@ -27,6 +29,7 @@ class Sample:
 @dataclass
 class TimeSeries:
     """Prometheus time series (labels + samples)."""
+
     labels: List[Label] = field(default_factory=list)
     samples: List[Sample] = field(default_factory=list)
 
@@ -34,6 +37,7 @@ class TimeSeries:
 @dataclass
 class WriteRequest:
     """Prometheus Remote Write request."""
+
     timeseries: List[TimeSeries] = field(default_factory=list)
 
     def SerializeToString(self) -> bytes:
@@ -83,13 +87,13 @@ class WriteRequest:
         output = bytearray()
 
         # name (field 1, string)
-        name_bytes = label.name.encode('utf-8')
+        name_bytes = label.name.encode("utf-8")
         output.extend(self._encode_key(1, 2))
         output.extend(self._encode_varint(len(name_bytes)))
         output.extend(name_bytes)
 
         # value (field 2, string)
-        value_bytes = label.value.encode('utf-8')
+        value_bytes = label.value.encode("utf-8")
         output.extend(self._encode_key(2, 2))
         output.extend(self._encode_varint(len(value_bytes)))
         output.extend(value_bytes)
@@ -99,11 +103,12 @@ class WriteRequest:
     def _serialize_sample(self, sample: Sample) -> bytes:
         """Serialize a Sample message."""
         import struct
+
         output = bytearray()
 
         # value (field 1, double/fixed64, wire type 1)
         output.extend(self._encode_key(1, 1))
-        output.extend(struct.pack('<d', sample.value))
+        output.extend(struct.pack("<d", sample.value))
 
         # timestamp (field 2, int64, wire type 0)
         output.extend(self._encode_key(2, 0))
@@ -120,8 +125,8 @@ class WriteRequest:
     def _encode_varint(value: int) -> bytes:
         """Encode integer as protobuf varint."""
         output = bytearray()
-        while value > 0x7f:
-            output.append((value & 0x7f) | 0x80)
+        while value > 0x7F:
+            output.append((value & 0x7F) | 0x80)
             value >>= 7
-        output.append(value & 0x7f)
+        output.append(value & 0x7F)
         return bytes(output)

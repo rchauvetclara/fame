@@ -89,6 +89,9 @@ __pypackages__/
 celerybeat-schedule
 celerybeat.pid
 
+# Azure Functions local settings (contains secrets)
+local.settings.json
+
 # Environments
 .env
 .venv

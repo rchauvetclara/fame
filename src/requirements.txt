@@ -1,0 +1,10 @@
+azure-data-tables>=12.7.0
+azure-functions>=1.23.0
+azure-identity>=1.23.0
+azure-loganalytics>=0.1.1
+cffi>=2.0.0
+cryptography>=46.0.0
+datadog>=0.52.0
+python-dateutil>=2.9.0
+python-snappy>=0.7.0
+requests>=2.32.3

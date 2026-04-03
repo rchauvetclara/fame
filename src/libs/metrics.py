@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Dict, Tuple, Optional
 
 if TYPE_CHECKING:
-    from src.libs.prometheus_pb2 import WriteRequest
+    from libs.prometheus_pb2 import WriteRequest
 
 logger = logging.getLogger("metrics")
 
@@ -40,19 +40,19 @@ def _sanitize_prometheus_name(name: str) -> str:
 
     # Replace invalid characters with underscores
     # Keep only letters, digits, underscores, and colons
-    sanitized = re.sub(r'[^a-zA-Z0-9_:]', '_', name)
+    sanitized = re.sub(r"[^a-zA-Z0-9_:]", "_", name)
 
     # Collapse multiple consecutive underscores into single underscore
-    sanitized = re.sub(r'_+', '_', sanitized)
+    sanitized = re.sub(r"_+", "_", sanitized)
 
     # Ensure doesn't start with digit
     if sanitized and sanitized[0].isdigit():
-        sanitized = '_' + sanitized
+        sanitized = "_" + sanitized
 
     # Log warning if name was modified
     if sanitized != original_name:
         logger.warning(
-            f"Metric name sanitized for Prometheus: '{original_name}' -> '{sanitized}'"
+            f"Metric name sanitized for Prometheus: '{original_name}' -> '{sanitized}'",
         )
 
     return sanitized
@@ -112,7 +112,13 @@ def get_metrics_sender() -> "MetricsSender":
     sfx_realm = os.environ.get("SFX_REALM")
 
     # Prioritize ObsByClara if available
-    if obc_endpoint and obc_region and obc_service and aws_access_key_id and aws_secret_access_key:
+    if (
+        obc_endpoint
+        and obc_region
+        and obc_service
+        and aws_access_key_id
+        and aws_secret_access_key
+    ):
         logger.info("Using ObsByClara metrics sender")
         obc_config = {
             "endpoint": obc_endpoint,
@@ -162,7 +168,9 @@ class MetricsSender(ABC):
 
     @abstractmethod
     def send_metrics(
-        self, name: str, values: List[Tuple[datetime, float, Dict[str, str]]]
+        self,
+        name: str,
+        values: List[Tuple[datetime, float, Dict[str, str]]],
     ) -> None:
         """
         Send metrics to the backend.
@@ -198,7 +206,7 @@ class DatadogMetricsSender(MetricsSender):
 
         try:
             logger.debug(
-                f"Initializing Datadog metrics sender with host: {self.api_host}"
+                f"Initializing Datadog metrics sender with host: {self.api_host}",
             )
 
             # Initialize the Datadog client
@@ -208,7 +216,9 @@ class DatadogMetricsSender(MetricsSender):
             raise
 
     def send_metrics(
-        self, name: str, values: List[Tuple[datetime, float, Dict[str, str]]]
+        self,
+        name: str,
+        values: List[Tuple[datetime, float, Dict[str, str]]],
     ) -> None:
         """
         Send metrics to the Datadog.
@@ -235,7 +245,7 @@ class DatadogMetricsSender(MetricsSender):
         # Send metrics to Datadog
         for batch in metrics_by_dimensions.values():
             logger.debug(
-                f"Sending metric {name} with points {batch['points']} and dimensions {batch['dimensions']}"
+                f"Sending metric {name} with points {batch['points']} and dimensions {batch['dimensions']}",
             )
             try:
                 datadog.api.Metric.send(
@@ -273,7 +283,9 @@ class SignalFxMetricsSender(MetricsSender):
         }
 
     def send_metrics(
-        self, name: str, values: List[Tuple[datetime, float, Dict[str, str]]]
+        self,
+        name: str,
+        values: List[Tuple[datetime, float, Dict[str, str]]],
     ) -> None:
         """
         Send metrics to the SignalFx.
@@ -289,7 +301,7 @@ class SignalFxMetricsSender(MetricsSender):
         sfx_metrics = []
         for dt, v, dim in values:
             logger.debug(
-                f"Sending metric {name} with value {v} at {dt} and dimensions {dim}"
+                f"Sending metric {name} with value {v} at {dt} and dimensions {dim}",
             )
             sfx_metrics.append(
                 {
@@ -297,7 +309,7 @@ class SignalFxMetricsSender(MetricsSender):
                     "value": v,
                     "timestamp": dt.timestamp() * 1000,
                     "dimensions": dim,
-                }
+                },
             )
 
         try:
@@ -341,7 +353,7 @@ class ObsByClaraMetricsSender(MetricsSender):
         :param max_retries: Maximum number of retry attempts (default: 3)
         """
         logger.info(
-            f"Initializing ObsByClara metrics sender with endpoint: {endpoint}, region: {region}"
+            f"Initializing ObsByClara metrics sender with endpoint: {endpoint}, region: {region}",
         )
 
         if not endpoint:
@@ -368,7 +380,9 @@ class ObsByClaraMetricsSender(MetricsSender):
         self.max_retries = max_retries
 
     def _build_prometheus_write_request(
-        self, name: str, values: List[Tuple[datetime, float, Dict[str, str]]]
+        self,
+        name: str,
+        values: List[Tuple[datetime, float, Dict[str, str]]],
     ) -> "WriteRequest":
         """
         Build a Prometheus WriteRequest from metric data.
@@ -377,7 +391,7 @@ class ObsByClaraMetricsSender(MetricsSender):
         :param values: List of (timestamp, value, dimensions) tuples
         :return: Prometheus WriteRequest object
         """
-        from src.libs.prometheus_pb2 import WriteRequest, TimeSeries, Label, Sample
+        from libs.prometheus_pb2 import WriteRequest, TimeSeries, Label, Sample
 
         write_request = WriteRequest()
 
@@ -403,13 +417,15 @@ class ObsByClaraMetricsSender(MetricsSender):
             write_request.timeseries.append(ts)
 
         logger.debug(
-            f"Built Prometheus WriteRequest with {len(write_request.timeseries)} time series"
+            f"Built Prometheus WriteRequest with {len(write_request.timeseries)} time series",
         )
 
         return write_request
 
     def send_metrics(
-        self, name: str, values: List[Tuple[datetime, float, Dict[str, str]]]
+        self,
+        name: str,
+        values: List[Tuple[datetime, float, Dict[str, str]]],
     ) -> None:
         """
         Send metrics to ObsByClara using AWS SigV4 signed requests with Prometheus Remote Write format.
@@ -439,7 +455,7 @@ class ObsByClaraMetricsSender(MetricsSender):
         try:
             compressed_payload = snappy.compress(payload_bytes)
             logger.debug(
-                f"Compressed payload: {len(payload_bytes)} -> {len(compressed_payload)} bytes"
+                f"Compressed payload: {len(payload_bytes)} -> {len(compressed_payload)} bytes",
             )
         except Exception as e:
             logger.error(f"Failed to compress payload with Snappy: {e}")
@@ -452,7 +468,7 @@ class ObsByClaraMetricsSender(MetricsSender):
                 response = self._send_signed_request(compressed_payload)
                 response.raise_for_status()
                 logger.info(
-                    f"Successfully sent {name} metrics to ObsByClara (attempt {attempt + 1})"
+                    f"Successfully sent {name} metrics to ObsByClara (attempt {attempt + 1})",
                 )
                 break
             except (
@@ -463,12 +479,12 @@ class ObsByClaraMetricsSender(MetricsSender):
                     delay = 2**attempt
                     logger.warning(
                         f"Attempt {attempt + 1} failed with {type(e).__name__}: {e}. "
-                        f"Retrying in {delay}s..."
+                        f"Retrying in {delay}s...",
                     )
                     time.sleep(delay)
                     continue
                 logger.error(
-                    f"Failed to send metrics to ObsByClara after {self.max_retries + 1} attempts"
+                    f"Failed to send metrics to ObsByClara after {self.max_retries + 1} attempts",
                 )
                 raise
             except requests.exceptions.HTTPError as e:
@@ -478,11 +494,21 @@ class ObsByClaraMetricsSender(MetricsSender):
                         delay = 2**attempt
                         logger.warning(
                             f"HTTP {e.response.status_code} error on attempt {attempt + 1}. "
-                            f"Retrying in {delay}s..."
+                            f"Retrying in {delay}s...",
                         )
                         time.sleep(delay)
                         continue
+                if e.response.status_code == 400 and (
+                    "out of order" in e.response.text
+                    or "timestamp too old" in e.response.text
+                ):
+                    logger.warning(
+                        f"Samples rejected by ObsByClara for {name} "
+                        f"(out of order or too old): {e.response.text}",
+                    )
+                    break
                 logger.error(f"HTTP error sending metrics to ObsByClara: {e}")
+                logger.error(f"Response body: {e.response.text}")
                 raise
 
     def _send_signed_request(self, payload: bytes) -> requests.Response:
@@ -511,7 +537,9 @@ class ObsByClaraMetricsSender(MetricsSender):
         # Create canonical request
         payload_hash = hashlib.sha256(payload).hexdigest()
 
-        canonical_headers = f"content-type:{content_type}\nhost:{host}\nx-amz-date:{amz_date}\n"
+        canonical_headers = (
+            f"content-type:{content_type}\nhost:{host}\nx-amz-date:{amz_date}\n"
+        )
         signed_headers = "content-type;host;x-amz-date"
 
         # Add session token to headers if present
@@ -519,9 +547,7 @@ class ObsByClaraMetricsSender(MetricsSender):
             canonical_headers += f"x-amz-security-token:{self.session_token}\n"
             signed_headers += ";x-amz-security-token"
 
-        canonical_request = (
-            f"{method}\n{canonical_uri}\n\n{canonical_headers}\n{signed_headers}\n{payload_hash}"
-        )
+        canonical_request = f"{method}\n{canonical_uri}\n\n{canonical_headers}\n{signed_headers}\n{payload_hash}"
 
         logger.debug(f"Canonical request: {canonical_request}")
 
@@ -529,7 +555,7 @@ class ObsByClaraMetricsSender(MetricsSender):
         algorithm = "AWS4-HMAC-SHA256"
         credential_scope = f"{date_stamp}/{self.region}/{self.service}/aws4_request"
         canonical_request_hash = hashlib.sha256(
-            canonical_request.encode("utf-8")
+            canonical_request.encode("utf-8"),
         ).hexdigest()
         string_to_sign = (
             f"{algorithm}\n{amz_date}\n{credential_scope}\n{canonical_request_hash}"
@@ -539,10 +565,15 @@ class ObsByClaraMetricsSender(MetricsSender):
 
         # Calculate signature
         signing_key = _get_signature_key(
-            self.secret_access_key, date_stamp, self.region, self.service
+            self.secret_access_key,
+            date_stamp,
+            self.region,
+            self.service,
         )
         signature = hmac.new(
-            signing_key, string_to_sign.encode("utf-8"), hashlib.sha256
+            signing_key,
+            string_to_sign.encode("utf-8"),
+            hashlib.sha256,
         ).hexdigest()
 
         # Build authorization header

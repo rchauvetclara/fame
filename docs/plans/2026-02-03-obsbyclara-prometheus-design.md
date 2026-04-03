@@ -59,27 +59,27 @@ Rules:
 **Example**:
 ```
 Fame Input:
-  name: "azure.vm.cpu_usage"
-  value: 75.5
-  timestamp: 2024-01-15T10:30:00Z
-  dimensions: {
-    "resource_group": "rg1",
-    "vm_name": "vm-01",
-    "region": "westeurope"
-  }
+    name: "azure.vm.cpu_usage"
+    value: 75.5
+    timestamp: 2024-01-15T10:30:00Z
+    dimensions: {
+        "resource_group": "rg1",
+        "vm_name": "vm-01",
+        "region": "westeurope"
+    }
 
 Prometheus Output:
-  TimeSeries {
-    labels: [
-      {name: "__name__", value: "azure_vm_cpu_usage"},
-      {name: "resource_group", value: "rg1"},
-      {name: "vm_name", value: "vm-01"},
-      {name: "region", value: "westeurope"}
-    ]
-    samples: [
-      {value: 75.5, timestamp: 1705316400000}
-    ]
-  }
+    TimeSeries {
+        labels: [
+            {name: "__name__", value: "azure_vm_cpu_usage"},
+            {name: "resource_group", value: "rg1"},
+            {name: "vm_name", value: "vm-01"},
+            {name: "region", value: "westeurope"}
+        ]
+        samples: [
+            {value: 75.5, timestamp: 1705316400000}
+        ]
+    }
 ```
 
 ### Implementation Changes
@@ -209,21 +209,21 @@ Examples:
 ## Files to Modify
 
 1. `src/libs/metrics.py`:
-   - Update `ObsByClaraMetricsSender` class
-   - Update factory function `get_metrics_sender()`
-   - Add protobuf message builder helper
-   - Add metric name sanitization helper
+    - Update `ObsByClaraMetricsSender` class
+    - Update factory function `get_metrics_sender()`
+    - Add protobuf message builder helper
+    - Add metric name sanitization helper
 
 2. `requirements.txt` or `pyproject.toml`:
-   - Add `python-snappy`
+    - Add `python-snappy`
 
 3. `src/libs/prometheus_remote_write.proto` (new vendored file):
-   - Minimal protobuf definitions for Remote Write
+    - Minimal protobuf definitions for Remote Write
 
 4. `README.md`:
-   - Update ObsByClara configuration documentation
-   - Remove namespace reference
-   - Add Prometheus-specific notes
+    - Update ObsByClara configuration documentation
+    - Remove namespace reference
+    - Add Prometheus-specific notes
 
 ## Success Criteria
 
