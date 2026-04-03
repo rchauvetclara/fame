@@ -37,14 +37,14 @@ def run_query(query, log_analytics_workspace_id, credentials):
 
     if result.status_code != 200:
         logger.error(
-            f"Error while querying Log Analytics {log_analytics_workspace_id}: {result.status_code} - {result.text}"
+            f"Error while querying Log Analytics {log_analytics_workspace_id}: {result.status_code} - {result.text}",
         )
         try:
             message = result.json()["error"]["message"]
         except Exception:
             message = result.text
         raise LogAnalyticsException(
-            f"Error while querying Log Analytics {log_analytics_workspace_id}: {message}"
+            f"Error while querying Log Analytics {log_analytics_workspace_id}: {message}",
         )
 
     res = result.json()

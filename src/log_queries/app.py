@@ -89,16 +89,19 @@ def run():
     extra_dimensions = {
         "fame_function_app_name": os.environ.get("WEBSITE_SITE_NAME", "unknown"),
         "fame_function_app_resource_group": os.environ.get(
-            "WEBSITE_RESOURCE_GROUP", "unknown"
+            "WEBSITE_RESOURCE_GROUP",
+            "unknown",
         ),
         "fame_function_app_subscription_id": os.environ.get(
-            "WEBSITE_OWNER_NAME", "unknown"
+            "WEBSITE_OWNER_NAME",
+            "unknown",
         ).split("+")[0],
     }
     extra_dimensions = extra_dimensions | {
         couple.split("=")[0]: couple.split("=")[1]
         for couple in os.environ.get(
-            "METRICS_EXTRA_DIMENSIONS", os.environ.get("SFX_EXTRA_DIMENSIONS", "")
+            "METRICS_EXTRA_DIMENSIONS",
+            os.environ.get("SFX_EXTRA_DIMENSIONS", ""),
         ).split(",")
         if couple != ""
     }

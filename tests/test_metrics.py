@@ -1,4 +1,5 @@
 """Tests for metrics module."""
+
 import os
 import pytest
 import snappy
@@ -34,7 +35,10 @@ class TestPrometheusNameSanitization:
 
     def test_colons_preserved(self):
         """Colons are valid in Prometheus names and should be preserved."""
-        assert _sanitize_prometheus_name("metric:subsystem:name") == "metric:subsystem:name"
+        assert (
+            _sanitize_prometheus_name("metric:subsystem:name")
+            == "metric:subsystem:name"
+        )
 
     def test_multiple_consecutive_underscores(self):
         """Multiple consecutive invalid chars become single underscore."""
@@ -62,7 +66,7 @@ class TestObsByClaraInit:
         assert sender.region == "eu-west-1"
         assert sender.service == "aps"
         assert sender.max_retries == 3
-        assert not hasattr(sender, 'namespace')
+        assert not hasattr(sender, "namespace")
 
     def test_init_with_session_token(self):
         """Should accept optional session token."""
@@ -128,11 +132,12 @@ class TestMetricsSenderFactory:
 
         with patch.dict(os.environ, env_vars, clear=True):
             from src.libs.metrics import get_metrics_sender
+
             sender = get_metrics_sender()
 
             assert isinstance(sender, ObsByClaraMetricsSender)
             assert sender.region == "eu-west-1"
-            assert not hasattr(sender, 'namespace')
+            assert not hasattr(sender, "namespace")
 
     def test_factory_obeys_priority_order(self):
         """Factory should prioritize ObsByClara > Datadog > SignalFx."""
@@ -148,6 +153,7 @@ class TestMetricsSenderFactory:
 
         with patch.dict(os.environ, env_vars, clear=True):
             from src.libs.metrics import get_metrics_sender
+
             sender = get_metrics_sender()
 
             assert isinstance(sender, ObsByClaraMetricsSender)
@@ -275,7 +281,7 @@ class TestObsByClaraSendMetrics:
         timestamp = datetime(2026, 1, 1, 12, 0, 0)
         values = [(timestamp, 42.5, {"env": "prod"})]
 
-        with patch.object(sender, '_send_signed_request') as mock_send:
+        with patch.object(sender, "_send_signed_request") as mock_send:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.raise_for_status = Mock()
@@ -306,7 +312,7 @@ class TestObsByClaraSendMetrics:
             secret_access_key="secret",
         )
 
-        with patch.object(sender, '_send_signed_request') as mock_send:
+        with patch.object(sender, "_send_signed_request") as mock_send:
             sender.send_metrics("test_metric", [])
 
             # Should not make request
@@ -328,8 +334,8 @@ class TestObsByClaraSendMetrics:
         timestamp = datetime(2026, 1, 1, 12, 0, 0)
         values = [(timestamp, 42.5, {"env": "prod"})]
 
-        with patch.object(sender, '_send_signed_request') as mock_send:
-            with patch('time.sleep') as mock_sleep:
+        with patch.object(sender, "_send_signed_request") as mock_send:
+            with patch("time.sleep") as mock_sleep:
                 # Create HTTPError for 500 response
                 mock_response_fail = Mock()
                 mock_response_fail.status_code = 500
@@ -374,7 +380,7 @@ class TestObsByClaraSigV4Signing:
 
         test_payload = b"test_protobuf_bytes"
 
-        with patch('src.libs.metrics.requests.post') as mock_post:
+        with patch("src.libs.metrics.requests.post") as mock_post:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_post.return_value = mock_response
@@ -386,14 +392,14 @@ class TestObsByClaraSigV4Signing:
             call_kwargs = mock_post.call_args[1]
 
             # Verify headers
-            headers = call_kwargs['headers']
-            assert headers['Content-Type'] == 'application/x-protobuf'
-            assert 'Authorization' in headers
-            assert 'AWS4-HMAC-SHA256' in headers['Authorization']
-            assert 'X-Amz-Date' in headers
+            headers = call_kwargs["headers"]
+            assert headers["Content-Type"] == "application/x-protobuf"
+            assert "Authorization" in headers
+            assert "AWS4-HMAC-SHA256" in headers["Authorization"]
+            assert "X-Amz-Date" in headers
 
             # Verify payload is bytes
-            assert call_kwargs['data'] == test_payload
+            assert call_kwargs["data"] == test_payload
 
     def test_send_signed_request_includes_session_token(self):
         """Should include X-Amz-Security-Token when session token present."""
@@ -408,12 +414,12 @@ class TestObsByClaraSigV4Signing:
 
         test_payload = b"test"
 
-        with patch('src.libs.metrics.requests.post') as mock_post:
+        with patch("src.libs.metrics.requests.post") as mock_post:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_post.return_value = mock_response
 
             sender._send_signed_request(test_payload)
 
-            headers = mock_post.call_args[1]['headers']
-            assert headers['X-Amz-Security-Token'] == 'session123'
+            headers = mock_post.call_args[1]["headers"]
+            assert headers["X-Amz-Security-Token"] == "session123"

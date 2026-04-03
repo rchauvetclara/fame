@@ -15,7 +15,7 @@ import sys
 import os
 from datetime import datetime
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from libs.metrics import get_metrics_sender
 
@@ -24,7 +24,12 @@ def test_integration():
     """Send test metric to real AMP workspace."""
 
     # Check required env vars
-    required = ['OBC_ENDPOINT', 'OBC_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']
+    required = [
+        "OBC_ENDPOINT",
+        "OBC_REGION",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+    ]
     missing = [var for var in required if not os.environ.get(var)]
     if missing:
         print(f"Missing required env vars: {missing}")
@@ -47,15 +52,16 @@ def test_integration():
         print("✓ Metric sent successfully!")
 
         print("\nVerify in AWS console:")
-        print(f"- Open CloudWatch > Prometheus workspaces")
+        print("- Open CloudWatch > Prometheus workspaces")
         print(f"- Query: {metric_name}")
-        print(f"- Should see value 42.0 with labels test=integration, env=dev")
+        print("- Should see value 42.0 with labels test=integration, env=dev")
 
         return 0
 
     except Exception as e:
         print(f"✗ Integration test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

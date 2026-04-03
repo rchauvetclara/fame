@@ -91,18 +91,18 @@ The payload will follow AWS CloudWatch PutMetricData format:
 
 ```json
 {
-  "Namespace": "CustomMetrics",
-  "MetricData": [
-    {
-      "MetricName": "metric_name",
-      "Timestamp": "2026-01-29T10:30:00Z",
-      "Value": 123.45,
-      "Unit": "None",
-      "Dimensions": [
-        {"Name": "dimension_key", "Value": "dimension_value"}
-      ]
-    }
-  ]
+    "Namespace": "CustomMetrics",
+    "MetricData": [
+        {
+            "MetricName": "metric_name",
+            "Timestamp": "2026-01-29T10:30:00Z",
+            "Value": 123.45,
+            "Unit": "None",
+            "Dimensions": [
+                {"Name": "dimension_key", "Value": "dimension_value"}
+            ]
+        }
+    ]
 }
 ```
 

@@ -20,7 +20,7 @@ linked to it
 * Either:
     * A Prometheus-compatible remote write endpoint (e.g., AWS Managed Prometheus, Grafana Cloud) with AWS credentials for SigV4 authentication
     * OR a [Splunk Observability](https://www.observability.splunk.com/en_us/infrastructure-monitoring.html) account and its
-      associated [ingest Token](https://dev.splunk.com/observability/docs/administration/authtokens/#Organization-access-tokens)
+        associated [ingest Token](https://dev.splunk.com/observability/docs/administration/authtokens/#Organization-access-tokens)
     * OR a [Datadog](https://www.datadoghq.com/) account and its associated API key
 
 
@@ -100,10 +100,10 @@ The records in the Table Storage must have the following columns:
 
 ### Log queries requirements
 
-The query must contain the columns `metric_value` with a metric value and `timestamp` with the datetime of the metric 
+The query must contain the columns `metric_value` with a metric value and `timestamp` with the datetime of the metric
 to send. The other columns must be strings and are treated as dimensions for the metric.
 
-For Log Analytics queries, you must specify a time range in your query to avoid retrieving and sending a huge amount 
+For Log Analytics queries, you must specify a time range in your query to avoid retrieving and sending a huge amount
 of data.
 
 ## How to deploy
